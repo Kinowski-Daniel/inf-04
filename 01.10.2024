@@ -1,0 +1,187 @@
+package com.example.myapplication
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.myapplication.ui.theme.MyApplicationTheme
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            MyApplicationTheme {
+                MainScreen()
+            }
+        }
+    }
+}
+
+@Composable
+fun MainScreen() {
+    var showLogin by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    if (showLogin) {
+        LoginScreen(context) { showLogin = false }
+    } else {
+        RegistrationScreen(context,
+            onRegisterClick = { showLogin = false },
+            onLoginClick = { showLogin = true }
+        )
+    }
+}
+
+@Composable
+fun RegistrationScreen(context: Context, onRegisterClick: () -> Unit, onLoginClick: () -> Unit) {
+    val email = remember { mutableStateOf("") }
+    val password = remember { mutableStateOf("") }
+    val confirmPassword = remember { mutableStateOf("") }
+    val message = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFF007BFF)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Rejestruj Konto", fontSize = 32.sp, color = Color.White, modifier = Modifier.padding(16.dp))
+
+        TextFieldWithLabel(email, "Podej E-mail")
+        TextFieldWithLabel(password, "Podaj Hasło", isPassword = true)
+        TextFieldWithLabel(confirmPassword, "Potwierdź Hasło", isPassword = true)
+
+        Button(onClick = {
+            message.value = validateRegistration(email.value, password.value, confirmPassword.value, context)
+        }, modifier = Modifier.fillMaxWidth(0.5f).padding(bottom = 10.dp)) {
+            Text("ZATWIERDZ", color = Color.White)
+        }
+
+        if (message.value.isNotEmpty()) {
+            Text(message.value, color = Color.Black, modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodyLarge)
+        }
+
+        Button(onClick = onLoginClick) {
+            Text("Przejdź do Logowania")
+        }
+    }
+}
+
+@Composable
+fun LoginScreen(context: Context, onLoginSuccess: () -> Unit) {
+    val email = remember { mutableStateOf("") }
+    val password = remember { mutableStateOf("") }
+    val message = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFF28A745)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Logowanie", fontSize = 32.sp, color = Color.White, modifier = Modifier.padding(16.dp))
+
+        TextFieldWithLabel(email, "E-mail")
+        TextFieldWithLabel(password, "Hasło", isPassword = true)
+
+        Button(onClick = {
+            message.value = validateLogin(email.value, password.value, context, onLoginSuccess)
+        }) {
+            Text("ZALOGUJ SIĘ", color = Color.White)
+        }
+
+        if (message.value.isNotEmpty()) {
+            Text(message.value, color = Color.Black, modifier = Modifier.padding(top = 10.dp))
+        }
+    }
+}
+
+@Composable
+fun TextFieldWithLabel(state: MutableState<String>, label: String, isPassword: Boolean = false) {
+    OutlinedTextField(
+        value = state.value,
+        onValueChange = { state.value = it },
+        label = { Text(label) },
+        placeholder = { Text(label) },
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        singleLine = true
+    )
+}
+
+fun validateRegistration(email: String, password: String, confirmPassword: String, context: Context): String {
+    return when {
+        !isValidEmail(email) -> "Błąd: Nieprawidłowy format e-maila"
+        !isValidPassword(password) -> "Błąd: Hasło musi mieć co najmniej 8 znaków, 1 cyfrę i 1 znak specjalny"
+        password != confirmPassword -> "Błąd: Hasła nie są takie same"
+        else -> {
+            saveCredentials(context, email, password)
+            "Rejestracja zakończona sukcesem"
+        }
+    }
+}
+
+fun isValidPassword(password: String): Boolean {
+    val passwordPattern = "^(?=.*[0-9])(?=.*[!@#\$%^&*])[A-Za-z\\d!@#\$%^&*]{8,}\$"
+    return Regex(passwordPattern).matches(password)
+}
+
+
+fun validateLogin(email: String, password: String, context: Context, onLoginSuccess: () -> Unit): String {
+    val (savedEmail, savedPassword) = getSavedCredentials(context)
+    return if (email == savedEmail && password == savedPassword) {
+        onLoginSuccess()
+        "Zalogowano pomyślnie"
+    } else {
+        "Nieprawidłowy e-mail lub hasło"
+    }
+}
+
+fun isValidEmail(email: String) = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+
+
+fun saveCredentials(context: Context, email: String, password: String) {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    with(sharedPreferences.edit()) {
+        putString("EMAIL", email)
+        putString("PASSWORD", password)
+        apply()
+    }
+}
+
+fun getSavedCredentials(context: Context): Pair<String, String> {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    return Pair(
+        sharedPreferences.getString("EMAIL", "") ?: "",
+        sharedPreferences.getString("PASSWORD", "") ?: ""
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    MyApplicationTheme {
+        MainScreen()
+    }
+}
