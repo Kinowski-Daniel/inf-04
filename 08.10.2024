@@ -1,0 +1,404 @@
+package com.example.myapplication
+
+import android.content.Context
+import android.content.SharedPreferences
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.example.myapplication.ui.theme.MyApplicationTheme
+import android.app.DatePickerDialog
+import android.widget.DatePicker
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+        setContent {
+            MyApplicationTheme {
+                MainScreen()
+            }
+        }
+    }
+}
+
+@Composable
+fun MainScreen() {
+    var showLogin by remember { mutableStateOf(false) }
+    var showRegistration by remember { mutableStateOf(false) }
+    var loggedInEmail by remember { mutableStateOf("") }
+    val context = LocalContext.current
+
+    when {
+        loggedInEmail.isNotEmpty() -> {
+            WelcomeScreen(email = loggedInEmail) {
+                loggedInEmail = "" // Resetuj e-mail przy wylogowaniu
+            }
+        }
+        showLogin -> {
+            LoginScreen(context, onBackClick = { showLogin = false }) { email ->
+                loggedInEmail = email // Zaktualizuj e-mail po zalogowaniu
+                showLogin = false
+            }
+        }
+        showRegistration -> {
+            RegistrationScreen(context,
+                onRegisterClick = { showRegistration = false },
+                onLoginClick = { showLogin = true },
+                onBackClick = { showRegistration = false }
+            )
+        }
+        else -> {
+            WelcomeChoiceScreen(
+                onLoginClick = { showLogin = true },
+                onRegisterClick = { showRegistration = true }
+            )
+        }
+    }
+}
+
+@Composable
+fun WelcomeChoiceScreen(onLoginClick: () -> Unit, onRegisterClick: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFF007BFF)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("Wybierz opcję", fontSize = 32.sp, color = Color.White, modifier = Modifier.padding(16.dp))
+
+        Button(onClick = onLoginClick, modifier = Modifier.fillMaxWidth(0.5f).padding(bottom = 10.dp)) {
+            Text("Logowanie", color = Color.White)
+        }
+
+        Button(onClick = onRegisterClick, modifier = Modifier.fillMaxWidth(0.5f)) {
+            Text("Rejestracja", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun WelcomeScreen(email: String, onLogout: () -> Unit) {
+    var newItem by remember { mutableStateOf("") } // Stan dla nowego elementu
+    var itemList by remember { mutableStateOf(listOf<Pair<String, String?>>()) } // Stan dla listy elementów (zadanie, data)
+    var editingIndex by remember { mutableStateOf<Int?>(null) } // Stan dla indeksu edytowanego elementu
+    var editedItem by remember { mutableStateOf("") } // Stan dla edytowanego tekstu
+    val context = LocalContext.current
+
+    // Stan dla wyboru daty
+    val calendar = Calendar.getInstance()
+    val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    var selectedDate by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFF6C757D)),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Top
+    ) {
+        Text("Witaj, $email!", fontSize = 32.sp, color = Color.White)
+
+        // Pole tekstowe do wprowadzenia nowego elementu
+        OutlinedTextField(
+            value = newItem,
+            onValueChange = { newItem = it },
+            label = { Text("Dodaj nowe zadanie") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 16.dp)
+        )
+
+        // Przycisk do wyboru daty
+        Button(onClick = {
+            val datePickerDialog = DatePickerDialog(
+                context,
+                { _: DatePicker, year: Int, month: Int, day: Int ->
+                    calendar.set(year, month, day)
+                    selectedDate = dateFormat.format(calendar.time)
+                },
+                calendar.get(Calendar.YEAR),
+                calendar.get(Calendar.MONTH),
+                calendar.get(Calendar.DAY_OF_MONTH)
+            )
+            datePickerDialog.show()
+        }, modifier = Modifier.padding(bottom = 16.dp)) {
+            Text(text = "Wybierz datę", color = Color.White)
+        }
+
+        // Wyświetl wybraną datę
+        selectedDate?.let {
+            Text(text = "Wybrana data: $it", color = Color.White)
+        }
+
+        // Przycisk do dodawania nowego elementu
+        Button(onClick = {
+            if (newItem.isNotEmpty()) {
+                itemList = itemList + (newItem to selectedDate) // Dodaj element i datę do listy
+                newItem = "" // Wyczyszczenie pola tekstowego po dodaniu elementu
+                selectedDate = null // Wyczyszczenie wybranej daty
+            }
+        }, modifier = Modifier.padding(bottom = 16.dp)) {
+            Text("Dodaj", color = Color.White)
+        }
+
+        // Wyświetl listę elementów z możliwością usunięcia, edycji oraz z przypisaną datą
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight(0.7f)
+                .weight(1f)
+        ) {
+            items(itemList.size) { index ->
+                val (task, dueDate) = itemList[index]
+
+                if (editingIndex == index) {
+                    // Tryb edycji dla wybranego elementu
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        OutlinedTextField(
+                            value = editedItem,
+                            onValueChange = { editedItem = it },
+                            modifier = Modifier.fillMaxWidth(0.7f),
+                            label = { Text("Edytuj zadanie") }
+                        )
+
+                        // Przycisk zatwierdzający edycję
+                        Button(onClick = {
+                            itemList = itemList.toMutableList().apply {
+                                set(index, editedItem to dueDate) // Zatwierdź zmiany, zachowując datę
+                            }
+                            editingIndex = null // Zakończ edycję
+                        }) {
+                            Text("Zatwierdź", color = Color.White)
+                        }
+
+                        // Przycisk anulujący edycję
+                        Button(onClick = {
+                            editingIndex = null // Anuluj edycję
+                        }) {
+                            Text("Anuluj", color = Color.White)
+                        }
+                    }
+                } else {
+                    // Normalny tryb wyświetlania elementu
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        // Wyświetl tekst elementu oraz datę (jeśli jest)
+                        Column {
+                            Text(task, fontSize = 20.sp, color = Color.White)
+                            dueDate?.let {
+                                Text("Do wykonania do: $it", fontSize = 16.sp, color = Color.LightGray)
+                            }
+                        }
+
+                        // Przycisk "Edytuj"
+                        Button(onClick = {
+                            editingIndex = index // Rozpocznij edycję
+                            editedItem = task // Wczytaj aktualną wartość do edycji
+                        }) {
+                            Text("Edytuj", color = Color.White)
+                        }
+
+                        // Przycisk "Usuń"
+                        Button(onClick = {
+                            itemList = itemList.toMutableList().apply {
+                                removeAt(index) // Usuń wybrany element z listy
+                            }
+                        }) {
+                            Text("Usuń", color = Color.White)
+                        }
+                    }
+                }
+            }
+        }
+
+        Button(onClick = onLogout, modifier = Modifier.padding(top = 16.dp)) {
+            Text("Wyloguj", color = Color.White)
+        }
+    }
+}
+
+
+
+
+
+
+@Composable
+fun RegistrationScreen(context: Context, onRegisterClick: () -> Unit, onLoginClick: () -> Unit, onBackClick: () -> Unit) {
+    val email = remember { mutableStateOf("") }
+    val password = remember { mutableStateOf("") }
+    val confirmPassword = remember { mutableStateOf("") }
+    val message = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFF007BFF)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Rejestruj Konto", fontSize = 32.sp, color = Color.White, modifier = Modifier.padding(16.dp))
+
+        TextFieldWithLabel(email, "Podej E-mail")
+        TextFieldWithLabel(password, "Podaj Hasło", isPassword = true)
+        TextFieldWithLabel(confirmPassword, "Potwierdź Hasło", isPassword = true)
+
+        Button(onClick = {
+            message.value = validateRegistration(email.value, password.value, confirmPassword.value, context)
+        }, modifier = Modifier.fillMaxWidth(0.5f).padding(bottom = 10.dp)) {
+            Text("ZATWIERDZ", color = Color.White)
+        }
+
+        if (message.value.isNotEmpty()) {
+            Text(message.value, color = Color.Black, modifier = Modifier.padding(top = 10.dp), style = MaterialTheme.typography.bodyLarge)
+        }
+
+        Button(onClick = onLoginClick) {
+            Text("Przejdź do Logowania")
+        }
+
+        Spacer(modifier = Modifier.height(16.dp)) // Dodaj odstęp
+        Button(onClick = onBackClick) {
+            Text("Powrót", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun LoginScreen(context: Context, onBackClick: () -> Unit, onLoginSuccess: (String) -> Unit) {
+    val email = remember { mutableStateOf("") }
+    val password = remember { mutableStateOf("") }
+    val message = remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+            .background(Color(0xFF28A745)),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text("Logowanie", fontSize = 32.sp, color = Color.White, modifier = Modifier.padding(16.dp))
+
+        TextFieldWithLabel(email, "E-mail")
+        TextFieldWithLabel(password, "Hasło", isPassword = true)
+
+        Button(onClick = {
+            message.value = validateLogin(email.value, password.value, context) {
+                onLoginSuccess(email.value) // Przekaż e-mail po zalogowaniu
+            }
+        }) {
+            Text("ZALOGUJ SIĘ", color = Color.White)
+        }
+
+        if (message.value.isNotEmpty()) {
+            Text(message.value, color = Color.Black, modifier = Modifier.padding(top = 10.dp))
+        }
+
+        Spacer(modifier = Modifier.height(16.dp)) // Dodaj odstęp
+        Button(onClick = onBackClick) {
+            Text("Powrót", color = Color.White)
+        }
+    }
+}
+
+@Composable
+fun TextFieldWithLabel(state: MutableState<String>, label: String, isPassword: Boolean = false) {
+    OutlinedTextField(
+        value = state.value,
+        onValueChange = { state.value = it },
+        label = { Text(label) },
+        placeholder = { Text(label) },
+        visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+        singleLine = true
+    )
+}
+
+fun validateRegistration(email: String, password: String, confirmPassword: String, context: Context): String {
+    return when {
+        !isValidEmail(email) -> "Błąd: Nieprawidłowy format e-maila"
+        !isValidPassword(password) -> "Błąd: Hasło musi mieć co najmniej 8 znaków, 1 cyfrę i 1 znak specjalny"
+        password != confirmPassword -> "Błąd: Hasła nie są takie same"
+        else -> {
+            saveCredentials(context, email, password)
+            "Rejestracja zakończona sukcesem"
+        }
+    }
+}
+
+fun isValidPassword(password: String): Boolean {
+    val passwordPattern = "^(?=.*[0-9])(?=.*[!@#\$%^&*])[A-Za-z\\d!@#\$%^&*]{8,}\$"
+    return Regex(passwordPattern).matches(password)
+}
+
+fun validateLogin(email: String, password: String, context: Context, onLoginSuccess: () -> Unit): String {
+    val (savedEmail, savedPassword) = getSavedCredentials(context)
+    return if (email == savedEmail && password == savedPassword) {
+        onLoginSuccess()
+        "Zalogowano pomyślnie"
+    } else {
+        "Nieprawidłowy e-mail lub hasło"
+    }
+}
+
+fun isValidEmail(email: String) = android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
+
+fun saveCredentials(context: Context, email: String, password: String) {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    with(sharedPreferences.edit()) {
+        putString("EMAIL", email)
+        putString("PASSWORD", password)
+        apply()
+    }
+}
+
+fun getSavedCredentials(context: Context): Pair<String, String> {
+    val sharedPreferences: SharedPreferences = context.getSharedPreferences("MyAppPrefs", Context.MODE_PRIVATE)
+    return Pair(
+        sharedPreferences.getString("EMAIL", "") ?: "",
+        sharedPreferences.getString("PASSWORD", "") ?: ""
+    )
+}
+
+@Preview(showBackground = true)
+@Composable
+fun GreetingPreview() {
+    MyApplicationTheme {
+        MainScreen()
+    }
+}
