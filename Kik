@@ -145,3 +145,14 @@ ReactDOM.render(
   </>,
   rootElement
 );
+import React from "react";
+import ReactDOM from "react-dom";
+import "./index.css";
+import Game from "./App"; // Zakładamy, że główny komponent gry jest w App.js
+
+ReactDOM.render(
+  <React.StrictMode>
+    <Game />
+  </React.StrictMode>,
+  document.getElementById("root")
+);
