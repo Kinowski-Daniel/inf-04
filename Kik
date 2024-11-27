@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import ReactDOM from "react-dom";
-
-// Komponent pojedynczego pola
+import ReactDOM from "react-dom/client"; 
+export default Game;
 function Square({ value, onClick }) {
   return (
     <button className="square" onClick={onClick}>
@@ -10,7 +9,7 @@ function Square({ value, onClick }) {
   );
 }
 
-// Komponent planszy
+
 function Board() {
   const [squares, setSquares] = useState(Array(9).fill(null));
   const [isXNext, setIsXNext] = useState(true);
@@ -22,7 +21,7 @@ function Board() {
 
   function handleClick(index) {
     if (squares[index] || winner) {
-      return; // Ignoruj kliknięcie, jeśli pole zajęte lub jest zwycięzca
+      return; 
     }
 
     const newSquares = squares.slice();
@@ -62,7 +61,7 @@ function Board() {
   );
 }
 
-// Główny komponent gry
+
 function Game() {
   return (
     <div className="game">
@@ -70,10 +69,11 @@ function Game() {
         <Board />
       </div>
     </div>
+    
   );
 }
 
-// Funkcja do obliczania zwycięzcy
+
 function calculateWinner(squares) {
   const lines = [
     [0, 1, 2],
@@ -96,7 +96,7 @@ function calculateWinner(squares) {
   return null;
 }
 
-// Stylowanie CSS
+
 const style = `
   .game {
     display: flex;
@@ -136,170 +136,26 @@ const style = `
   }
 `;
 
-// Renderowanie aplikacji
+
 const rootElement = document.getElementById("root");
-ReactDOM.render(
-  <>
-    <style>{style}</style>
-    <Game />
-  </>,
-  rootElement
-);
-import React from "react";
-import ReactDOM from "react-dom";
-import "./index.css";
-import Game from "./App"; // Zakładamy, że główny komponent gry jest w App.js
-
-ReactDOM.render(
-  <React.StrictMode>
-    <Game />
-  </React.StrictMode>,
-  document.getElementById("root")
-);
-import React, { useState } from "react";
-import ReactDOM from "react-dom/client"; // Import nowej metody renderowania
-
-// Komponent pojedynczego pola
-function Square({ value, onClick }) {
-  return (
-    <button className="square" onClick={onClick}>
-      {value}
-    </button>
-  );
-}
-
-// Komponent planszy
-function Board() {
-  const [squares, setSquares] = useState(Array(9).fill(null));
-  const [isXNext, setIsXNext] = useState(true);
-
-  const winner = calculateWinner(squares);
-  const status = winner
-    ? `Zwycięzca: ${winner}`
-    : `Następny gracz: ${isXNext ? "X" : "O"}`;
-
-  function handleClick(index) {
-    if (squares[index] || winner) {
-      return; // Ignoruj kliknięcie, jeśli pole zajęte lub jest zwycięzca
-    }
-
-    const newSquares = squares.slice();
-    newSquares[index] = isXNext ? "X" : "O";
-    setSquares(newSquares);
-    setIsXNext(!isXNext);
-  }
-
-  function renderSquare(index) {
-    return (
-      <Square
-        value={squares[index]}
-        onClick={() => handleClick(index)}
-      />
-    );
-  }
-
-  return (
-    <div>
-      <div className="status">{status}</div>
-      <div className="board-row">
-        {renderSquare(0)}
-        {renderSquare(1)}
-        {renderSquare(2)}
-      </div>
-      <div className="board-row">
-        {renderSquare(3)}
-        {renderSquare(4)}
-        {renderSquare(5)}
-      </div>
-      <div className="board-row">
-        {renderSquare(6)}
-        {renderSquare(7)}
-        {renderSquare(8)}
-      </div>
-    </div>
-  );
-}
-
-// Główny komponent gry
-function Game() {
-  return (
-    <div className="game">
-      <div className="game-board">
-        <Board />
-      </div>
-    </div>
-  );
-}
-
-// Funkcja do obliczania zwycięzcy
-function calculateWinner(squares) {
-  const lines = [
-    [0, 1, 2],
-    [3, 4, 5],
-    [6, 7, 8],
-    [0, 3, 6],
-    [1, 4, 7],
-    [2, 5, 8],
-    [0, 4, 8],
-    [2, 4, 6],
-  ];
-
-  for (let line of lines) {
-    const [a, b, c] = line;
-    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-      return squares[a];
-    }
-  }
-
-  return null;
-}
-
-// Stylowanie CSS
-const style = `
-  .game {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    margin-top: 50px;
-  }
-
-  .game-board {
-    margin-bottom: 20px;
-  }
-
-  .board-row {
-    display: flex;
-  }
-
-  .square {
-    width: 50px;
-    height: 50px;
-    font-size: 24px;
-    text-align: center;
-    border: 1px solid #999;
-    background: #fff;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .square:hover {
-    background: #f0f0f0;
-  }
-
-  .status {
-    margin-bottom: 10px;
-    font-size: 18px;
-  }
-`;
-
-// Renderowanie aplikacji za pomocą ReactDOM.createRoot
-const rootElement = document.getElementById("root");
-const root = ReactDOM.createRoot(rootElement); // Utwórz root dla aplikacji
+const root = ReactDOM.createRoot(rootElement); 
 root.render(
   <>
     <style>{style}</style>
-    <Game />
+    <Game/>
   </>
+
+);
+import React from "react";
+import ReactDOM from "react-dom/client";
+import "./index.css";
+import Game from "./App"; 
+
+const rootElement = document.getElementById("root");
+
+const root = ReactDOM.createRoot(rootElement);
+root.render(
+  <React.StrictMode>
+    <Game />
+  </React.StrictMode>,
 );
